@@ -1,45 +1,99 @@
 //--kind nodejs:20
 //--web true
-const { Ollama } = require('ollama')
-
+const { Ollama } = require('ollama');
 
 async function main(args) {
 
-    let input = args.input || ""
-    if (!input) {
-        res = {
-            "output": "Welcome to the Private LLM demo chat. Choose a model to chat with above.",
-            "title": "Open Source LLM Chat",
-            "message": "You can chat with an LLM using custom models."
-        }
-        return { "body": res };
+    const username = 'nuvolaris';
+    const password = '8qWZ3kaxaE50z2Y';
+    const apihost = 'https://skg00018.k8sgpu.net';
 
-    }
+    const credentials = Buffer.from(`${username}:${password}`).toString('base64');
 
-    if (!args.model) {
-        return {
-            body: {
-                output: "ERROR: missing model, Please choose one."
-            }
+    function updateOptions(options) {
+        const update = { ...options };
+        update.headers = {
+            ...update.headers,
+            Authorization: `Basic ${credentials}`,
         };
+        return update;
     }
 
-    return {
-        body: {
-            output: "Set an HOST in the Ollama action!"
-        }
+    const fetcher = function (url, options) {
+        return fetch(url, updateOptions(options));
     }
 
-    const ollama = new Ollama({ host: 'HERE' })
-    const response = await ollama.chat({
-        model: args.model,
-        messages: [{ role: 'user', content: input }],
+    const ollama = new Ollama({
+        host: apihost,
+        fetch: fetcher
     })
-    res = extract(response.message.content);
-    res['output'] = response.message.content;
-    console.log(response)
 
-    return { "body": res };
+    let command = args.command || ""
+
+    if (command) {
+        switch(command) {
+            case 'list':
+                const response = await ollama.list();
+                return { "body": response.models };
+            default:
+                return { "body": "No command with that name" };
+        }        
+    } else {
+
+        let input = args.input || ""
+        if (!input) {
+            res = {
+                "output": "Welcome to the Private LLM demo chat. Choose a model to chat with above.",
+                "title": "Open Source LLM Chat",
+                "message": "You can chat with an LLM using custom models."
+            }
+            return { "body": res };
+
+        }
+
+        if (!args.model) {
+            return {
+                body: {
+                    output: "ERROR: missing model, Please choose one."
+                }
+            };
+        }
+
+        let messageInput = {
+            model: args.model,
+            messages: [{ role: 'user', content: input }],
+        }
+        
+        if (args.images) {
+            try {
+                const b64Img = await urlToBase64(args.images);
+                messageInput.messages[0].images = [ b64Img ];
+            }
+            catch(e) {
+                console.log(e);
+            }
+        }
+
+        const response = await ollama.chat(messageInput)
+        res = extract(response.message.content);
+        res['output'] = response.message.content;
+        return { "body": res };
+    }
+}
+
+async function urlToBase64(url) {
+    try {
+        const response = await fetch(url);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        
+        const base64 = buffer.toString('base64');
+        console.log(base64);
+        
+        return `${base64}`;
+    } catch (error) {
+        console.error(`Failed to fetch ${url}:`, error.message);
+        return null;
+    }
 }
 
 
@@ -75,3 +129,16 @@ function extract(text) {
     }
     return res;
 }
+
+(async () => {
+    try {
+        const text = await main({
+            command: "list"
+        });
+        console.log(text);
+    } catch (e) {
+        // Deal with the fact the chain failed
+        console.log(e);
+    }
+    // `text` is not available here
+})();

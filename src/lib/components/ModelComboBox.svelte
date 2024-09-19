@@ -6,7 +6,8 @@
         type PopupSettings,
     } from "@skeletonlabs/skeleton";
 
-    const models = [
+    export let comboboxValue: string = "mistral";
+    export let models: string[] = [
         "codellama",
         "falcon",
         "llama2-uncensored",
@@ -16,8 +17,6 @@
         "mistral",
         "vicuna",
     ];
-
-    export let comboboxValue: string = "mistral";
 
     const popupCombobox: PopupSettings = {
         event: "click",

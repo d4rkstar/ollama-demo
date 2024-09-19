@@ -29,6 +29,7 @@
     }
 
     let services = {};
+    let availableLlamas = [];
 
     onMount(() => {
         fetch($page.url.href + "api/my/mastrogpt/index")
@@ -43,10 +44,19 @@
                 console.log(e);
                 alert("ERROR: cannot load index");
             });
+
+        fetch($page.url.href + "api/my/llama/ollama?command=list")
+            .then((x)=> x.json())
+            .then((data)=> {
+                for(const model of data) {
+                    availableLlamas.push(model.name);
+                }
+            })
     });
 
     let receiveMessage;
     let displayResponse;
+    
 
     let sendMessage = (name) => {
         if (services[name] === "llama/ollama") {
@@ -126,7 +136,7 @@
                         {title}
                     </div>
                     {#if title === "llama/ollama"}
-                        <ModelComboBox bind:comboboxValue={chosenLlama} />
+                        <ModelComboBox bind:comboboxValue={chosenLlama} bind:models={availableLlamas} />
                     {/if}
                 </div>
                 <button

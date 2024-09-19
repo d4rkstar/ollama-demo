@@ -45,7 +45,7 @@
             this.url = url;
         }
 
-        async invoke(msg) {
+        async invoke(msg, img) {
             // welcome message no input
             if (msg == null) {
                 return "Welcome, you have selected " + this.name;
@@ -62,6 +62,10 @@
 
             if (usingOllama) {
                 json["model"] = chosenLlama;
+            }
+
+            if (img) {
+                json["images"] = img;
             }
 
             // send the request
@@ -111,8 +115,27 @@
     }
 
     function human(msg) {
-        appendMessage(PERSON_NAME, PERSON_IMG, "right", msg, "");
+        appendMessage(PERSON_NAME, PERSON_IMG, "right", msg, "");        
         input = "";
+    }
+
+    function cleanUrl(url) {
+    // Strip trailing characters after image extension (if needed)
+        return url.replace(/[\s"'<>\{\}\|\^`]+$/, '');
+    }
+
+    function parseMessageForImages(input) {
+        console.log(`In parseMessageForImages Input is: ${input}`)
+        const imageRegex = /https?:\/\/[^\s"'<>\{\}\|\^`]+?\.(jpg|jpeg|png|gif|bmp|webp)(?=[\s"'<>\{\}\|\^`]|$)/gi;
+        let imgUrl = undefined;
+        // Extract image URLs
+        const imageUrls = input.match(imageRegex);
+        if (!imageUrls) return;
+        const cleanedImageUrls = imageUrls.map(cleanUrl);
+        if (cleanedImageUrls.length>0) {
+            imgUrl = imageUrls[0];            
+        }
+        return imgUrl
     }
 
     function formatDate(date) {
@@ -131,11 +154,18 @@
         let question = input;
         human(input);
 
+        const img = parseMessageForImages(question);
+        console.log(`Image is ${img}`);
+        if (img) {
+            let htmlImg =`<img src="${img}" width="140" />`;
+            appendMessage(PERSON_NAME, PERSON_IMG, "right", htmlImg, "");
+        }
+
         if (invoker) {
             isThinking = true;
 
             console.log("question ", question);
-            let { answer, data } = await invoker.invoke(question);
+            let { answer, data } = await invoker.invoke(question, img);
             console.log("answer", answer);
             isThinking = false;
 
